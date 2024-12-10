@@ -1,0 +1,85 @@
+<html lang="ja"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MIDIFILE to HEX by sohhi</title>
+    
+       
+    
+<style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            text-align: center;
+        }
+        button {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>MIDIFILE to HEX by @sohhi </h1>
+    <input type="file" id="fileInput" accept=".mid,.midi">
+    <button id="copyButton" disabled="">COPY</button>
+    <p id="status"></p>
+
+    <script>
+        let binaryData = ''; // 変換されたバイナリデータを保持する
+
+        const fileInput = document.getElementById('fileInput');
+        const copyButton = document.getElementById('copyButton');
+        const status = document.getElementById('status');
+
+        // Web Workerのセットアップ
+        const worker = new Worker('worker.js');
+
+        worker.onmessage = (event) => {
+            const { type, data } = event.data;
+
+            if (type === 'progress') {
+                // 進捗表示
+                status.textContent = `処理中... ${data}% 完了`;
+            } else if (type === 'result') {
+                // バイナリデータを保存
+                binaryData = data;
+                copyButton.disabled = false;
+                status.textContent = '完了';
+            }
+        };
+
+        fileInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (!file) {
+                alert('MIDIを選択しました');
+                return;
+            }
+
+            // 状態をリセット
+            binaryData = '';
+            copyButton.disabled = true;
+            status.textContent = 'loading...';
+
+            // ファイルを読み込む
+            const reader = new FileReader();
+            reader.onload = () => {
+                const arrayBuffer = reader.result;
+                worker.postMessage({ type: 'process', arrayBuffer });
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        // コピー機能
+        copyButton.addEventListener('click', () => {
+            if (binaryData) {
+                navigator.clipboard.writeText(binaryData).then(() => {
+                    alert('コピーしました！');
+                }).catch(() => {
+                    alert('コピーエラー');
+                });
+            } else {
+                alert('no data');
+            }
+        });
+    </script>
+
+
+</body></html>
